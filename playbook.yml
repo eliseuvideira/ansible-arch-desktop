@@ -1,0 +1,163 @@
+---
+- name: Setup Arch Desktop
+  hosts: localhost
+  become: true
+  become_user: root
+  vars_files:
+    - variables.yml
+  tasks:
+    - name: Update and Upgrade `pacman` Packages
+      pacman:
+        update_cache: true
+        upgrade: true
+
+    - name: Install Base Packages with `pacman`
+      pacman:
+        name:
+          - git
+          - make
+          - less
+          - sudo
+          - zsh
+        state: present
+
+    - name: Create Group `wheel`
+      group:
+        name: wheel
+        state: present
+
+    - name: Allow `wheel` Sudo Privileges
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: "# %wheel ALL=(ALL:ALL) NOPASSWD: ALL"
+        line: "%wheel ALL=(ALL:ALL) NOPASSWD: ALL"
+        validate: "/usr/bin/visudo -cf %s"
+
+    - name: Create Group `docker`
+      group:
+        name: docker
+        state: present
+
+    - name: Create User
+      user:
+        name: "{{ user }}"
+        shell: /bin/zsh
+        groups: wheel,docker
+        append: true
+
+    - name: Check `paru` Installed
+      become: true
+      become_user: "{{ user }}"
+      shell: |
+        #!/bin/sh
+        if which /usr/bin/paru >/dev/null; then
+          echo "Installed"
+        else
+          echo "Not Installed"
+        fi
+      register: check_paru_installed
+      changed_when: check_paru_installed.stdout != "Installed"
+      notify: Install `paru`
+
+    - name: Check Updates
+      become: true
+      become_user: "{{ user }}"
+      shell: |
+        #!/bin/sh
+        /usr/bin/paru -Qu | wc -l
+      register: check_updates
+      changed_when: check_updates.stdout != "0"
+      notify: Update Packages
+
+    - name: Check Missing Packages
+      become: true
+      become_user: "{{ user }}"
+      shell: |
+        #!/bin/bash
+        comm -23 <(echo "{{ packages | join(' ') }}" | tr " " "\n" | sort) <(paru -Q | cut -d ' ' -f 1 | sort)
+      register: missing_packages
+      changed_when: missing_packages.stdout_lines | length != 0
+      notify: Install Missing Packages
+      vars:
+        packages:
+          - cronie
+          - curl
+          - docker
+          - docker-compose
+          - nodejs
+          - npm
+          - neovim
+          - oh-my-zsh-git
+          - rsync
+          - shellcheck
+          - stow
+          - tmux
+          - vi
+          - vim
+          - yarn
+
+    - name: Notify Handlers
+      meta: flush_handlers
+
+    - name: Enable and Start Docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Clone and Update .dotfiles
+      become: true
+      become_user: "{{ user }}"
+      git:
+        repo: https://github.com/eliseuvideira/dotfiles-arch-desktop.git
+        dest: ~/.dotfiles
+      notify: Install .dotfiles
+
+  handlers:
+    - name: Ensure Directory `/opt/paru-bin` Exists
+      file:
+        path: /opt/paru-bin
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        recurse: true
+      listen: Install `paru`
+
+    - name: Clone `paru` Repository
+      become: true
+      become_user: "{{ user }}"
+      git:
+        repo: https://aur.archlinux.org/paru-bin.git
+        dest: /opt/paru-bin
+      listen: Install `paru`
+
+    - name: Install `paru` Using `makepkg`
+      become: true
+      become_user: "{{ user }}"
+      shell: |
+        #!/bin/sh
+        cd /opt/paru-bin
+        yes | /usr/bin/makepkg -si
+      listen: Install `paru`
+
+    - name: Update Packages
+      become: true
+      become_user: "{{ user }}"
+      shell: |
+        #!/bin/sh
+        yes | /usr/bin/paru -Syu
+
+    - name: Install Missing Packages
+      become: true
+      become_user: "{{ user }}"
+      shell: |
+        #!/bin/sh
+        yes | /usr/bin/paru -S $(echo "{{ missing_packages.stdout_lines | join(' ') }}")
+
+    - name: Install .dotfiles
+      become: true
+      become_user: "{{ user }}"
+      shell: |
+        #!/bin/sh
+        cd ~/.dotfiles && make install
