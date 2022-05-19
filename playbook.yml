@@ -3,8 +3,8 @@
   hosts: localhost
   become: true
   become_user: root
-  vars_files:
-    - variables.yml
+  vars:
+    user: eliseu
   tasks:
     - name: Update and Upgrade `pacman` Packages
       pacman:
@@ -85,6 +85,7 @@
           - curl
           - docker
           - docker-compose
+          - google-chrome
           - nodejs
           - npm
           - neovim
@@ -138,7 +139,7 @@
       shell: |
         #!/bin/sh
         cd /opt/paru-bin
-        yes | /usr/bin/makepkg -si
+        /usr/bin/makepkg -si --noconfirm
       listen: Install `paru`
 
     - name: Update Packages
@@ -146,14 +147,14 @@
       become_user: "{{ user }}"
       shell: |
         #!/bin/sh
-        yes | /usr/bin/paru -Syu
+        /usr/bin/paru -Syu --noconfirm
 
     - name: Install Missing Packages
       become: true
       become_user: "{{ user }}"
       shell: |
         #!/bin/sh
-        yes | /usr/bin/paru -S $(echo "{{ missing_packages.stdout_lines | join(' ') }}")
+        /usr/bin/paru -S $(echo "{{ missing_packages.stdout_lines | join(' ') }}") --noconfirm
 
     - name: Install .dotfiles
       become: true
