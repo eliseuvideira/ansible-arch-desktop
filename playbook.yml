@@ -46,6 +46,13 @@
         groups: wheel,docker
         append: true
 
+    - name: Configure Faillock
+      lineinfile:
+        dest: /etc/security/faillock.conf
+        state: present
+        regexp: "# deny = 3"
+        line: "deny = 10"
+
     - name: Check `paru` Installed
       become: true
       become_user: "{{ user }}"
