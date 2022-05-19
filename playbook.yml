@@ -81,6 +81,7 @@
       notify: Install Missing Packages
       vars:
         packages:
+          - azuredatastudio-bin
           - cronie
           - curl
           - docker
@@ -95,6 +96,7 @@
           - stow
           - tmux
           - vi
+          - visual-studio-code-bin
           - vim
           - yarn
 
