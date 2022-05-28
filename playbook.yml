@@ -3,8 +3,6 @@
   hosts: localhost
   become: true
   become_user: root
-  vars:
-    user: eliseu
   tasks:
     - name: Update and Upgrade `pacman` Packages
       pacman:
@@ -16,7 +14,6 @@
         name:
           - git
           - make
-          - less
           - sudo
           - zsh
         state: present
@@ -88,18 +85,30 @@
       notify: Install Missing Packages
       vars:
         packages:
+          - ansible
+          - ark
           - azuredatastudio-bin
           - cronie
           - curl
           - docker
           - docker-compose
           - google-chrome
+          - insomnia-bin
+          - jq
+          - kdeconnect
+          - less
+          - libffi6
+          - libxcrypt-compat
           - nodejs
           - npm
           - neovim
+          - noto-fonts-cjk
+          - noto-fonts-emoji
+          - nvm
           - oh-my-zsh-git
           - rsync
           - shellcheck
+          - spectacle
           - stow
           - tmux
           - vi
