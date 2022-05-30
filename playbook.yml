@@ -1,6 +1,6 @@
 ---
 - name: Setup Arch Desktop
-  hosts: localhost
+  hosts: all
   become: true
   become_user: root
   tasks:
